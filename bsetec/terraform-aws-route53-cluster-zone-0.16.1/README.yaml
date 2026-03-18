@@ -1,0 +1,71 @@
+#
+# This is the canonical configuration for the `README.md`
+# Run `make readme` to rebuild the `README.md`
+#
+
+# Name of this project
+name: terraform-aws-route53-cluster-zone
+# Tags of this project
+tags:
+  - aws
+  - terraform
+  - terraform-modules
+  - networking
+  - route53
+  - cluster
+  - zone
+# Categories of this project
+categories:
+  - terraform-modules/networking
+# Logo for this project
+#logo: docs/logo.png
+
+# License of this project
+license: "APACHE2"
+# Canonical GitHub repo
+github_repo: cloudposse/terraform-aws-route53-cluster-zone
+# Badges to display
+badges:
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudposse/terraform-aws-route53-cluster-zone.svg?style=for-the-badge
+    url: https://github.com/cloudposse/terraform-aws-route53-cluster-zone/releases/latest
+  - name: Last Updated
+    image: https://img.shields.io/github/last-commit/cloudposse/terraform-aws-route53-cluster-zone.svg?style=for-the-badge
+    url: https://github.com/cloudposse/terraform-aws-route53-cluster-zone/commits
+  - name: Slack Community
+    image: https://slack.cloudposse.com/for-the-badge.svg
+    url: https://cloudposse.com/slack
+
+# List any related terraform modules that this module may be used with or that this module depends on.
+related:
+  - name: "terraform-aws-route53-cluster-hostname"
+    description: "Terraform module to define a consistent AWS Route53 hostname"
+    url: "https://github.com/cloudposse/terraform-aws-route53-cluster-hostname"
+  - name: "terraform-aws-route53-alias"
+    description: "Terraform Module to Define Vanity Host/Domain (e.g. `brand.com`) as an ALIAS record"
+    url: "https://github.com/cloudposse/terraform-aws-route53-alias"
+  - name: "terraform-aws-kops-route53"
+    description: "Terraform module to lookup the IAM role associated with `kops` masters, and attach an IAM policy to the role with permissions to modify Route53 record sets"
+    url: "https://github.com/cloudposse/terraform-aws-kops-route53"
+# Short description of this project
+description: |-
+  Terraform module to easily define consistent cluster domains on `Route53`.
+# How to use this project
+usage: |-
+  Define a cluster domain of `foobar.example.com` using a custom naming convention for `zone_name`.
+  The `zone_name` variable is optional. It defaults to `$${stage}.$${parent_zone_name}`.
+
+  ```hcl
+  module "domain" {
+    source = "cloudposse/route53-cluster-zone/aws"
+    # Cloud Posse recommends pinning every module to a specific version
+    # version = "x.x.x"
+    namespace            = "eg"
+    stage                = "test"
+    name                 = "cluster"
+    parent_zone_name     = "example.com"
+    zone_name            = "$${name}.$${stage}.$${parent_zone_name}"
+  }
+  ```
+include: []
+contributors: []

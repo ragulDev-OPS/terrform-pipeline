@@ -1,0 +1,233 @@
+#
+# This is the canonical configuration for the `README.md`
+# Run `make readme` to rebuild the `README.md`
+#
+
+# Name of this project
+name: terraform-aws-eks-node-group
+# Logo for this project
+#logo: docs/logo.png
+
+# License of this project
+license: "APACHE2"
+# Canonical GitHub repo
+github_repo: cloudposse/terraform-aws-eks-node-group
+# Badges to display
+badges:
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudposse/terraform-aws-eks-node-group.svg?style=for-the-badge
+    url: https://github.com/cloudposse/terraform-aws-eks-node-group/releases/latest
+  - name: Last Updated
+    image: https://img.shields.io/github/last-commit/cloudposse/terraform-aws-eks-node-group.svg?style=for-the-badge
+    url: https://github.com/cloudposse/terraform-aws-eks-node-group/commits
+  - name: Slack Community
+    image: https://slack.cloudposse.com/for-the-badge.svg
+    url: https://cloudposse.com/slack
+
+# List any related terraform modules that this module may be used with or that this module depends on.
+related:
+  - name: "terraform-aws-eks-cluster"
+    description: "Terraform module to provision an EKS cluster on AWS"
+    url: "https://github.com/cloudposse/terraform-aws-eks-cluster"
+  - name: "terraform-aws-eks-workers"
+    description: "Terraform module to provision an AWS AutoScaling Group, IAM Role, and Security Group for EKS Workers"
+    url: "https://github.com/cloudposse/terraform-aws-eks-workers"
+  - name: "terraform-aws-ec2-autoscale-group"
+    description: "Terraform module to provision Auto Scaling Group and Launch Template on AWS"
+    url: "https://github.com/cloudposse/terraform-aws-ec2-autoscale-group"
+  - name: "terraform-aws-ecs-container-definition"
+    description: "Terraform module to generate well-formed JSON documents (container definitions) that are passed to the  aws_ecs_task_definition Terraform resource"
+    url: "https://github.com/cloudposse/terraform-aws-ecs-container-definition"
+  - name: "terraform-aws-ecs-alb-service-task"
+    description: "Terraform module which implements an ECS service which exposes a web service via ALB"
+    url: "https://github.com/cloudposse/terraform-aws-ecs-alb-service-task"
+  - name: "terraform-aws-ecs-web-app"
+    description: "Terraform module that implements a web app on ECS and supports autoscaling, CI/CD, monitoring, ALB integration, and much more"
+    url: "https://github.com/cloudposse/terraform-aws-ecs-web-app"
+  - name: "terraform-aws-ecs-codepipeline"
+    description: "Terraform module for CI/CD with AWS Code Pipeline and Code Build for ECS"
+    url: "https://github.com/cloudposse/terraform-aws-ecs-codepipeline"
+  - name: "terraform-aws-ecs-cloudwatch-autoscaling"
+    description: "Terraform module to autoscale ECS Service based on CloudWatch metrics"
+    url: "https://github.com/cloudposse/terraform-aws-ecs-cloudwatch-autoscaling"
+  - name: "terraform-aws-ecs-cloudwatch-sns-alarms"
+    description: "Terraform module to create CloudWatch Alarms on ECS Service level metrics"
+    url: "https://github.com/cloudposse/terraform-aws-ecs-cloudwatch-sns-alarms"
+  - name: "terraform-aws-ec2-instance"
+    description: "Terraform module for providing a general purpose EC2 instance"
+    url: "https://github.com/cloudposse/terraform-aws-ec2-instance"
+  - name: "terraform-aws-ec2-instance-group"
+    description: "Terraform module for provisioning multiple general purpose EC2 hosts for stateful applications"
+    url: "https://github.com/cloudposse/terraform-aws-ec2-instance-group"
+# Short description of this project
+description: |-
+  Terraform module to provision an EKS Managed Node Group for [Elastic Kubernetes Service](https://aws.amazon.com/eks/).
+
+  Instantiate it multiple times to create EKS Managed Node Groups with specific settings such as GPUs, EC2 instance types, or autoscale parameters.
+
+  **IMPORTANT:** When SSH access is enabled without specifying a source security group, this module provisions `EKS Node Group` nodes that are globally accessible by SSH (22) port. Normally, AWS recommends that no security group allows unrestricted ingress access to port 22 .
+
+introduction: |-
+  This module creates an [EKS Managed Node Group](https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html)
+  for an [EKS](https://aws.amazon.com/eks/) cluster.
+  It assumes you have already created an EKS cluster, but you can create the cluster and the node group in the
+  same Terraform configuration. See our
+  [full-featured root module (a.k.a. component) `eks/cluster`](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/cluster)
+  for an example of how to do that.
+
+  ### Launch Templates
+
+  This module always uses a [launch template](https://docs.aws.amazon.com/autoscaling/ec2/userguide/launch-templates.html)
+  to create the node group. You can create your own launch template and
+  pass in its ID, or else this module will create one for you.
+
+  The AWS default for EKS is that if the launch template is updated, the existing nodes will not be affected. Only
+  new instances added to the node group would get the changes specified in the new launch template. In contrast,
+  when the launch template changes, this module can immediately create a new node group from the new launch template
+  to replace the old one.
+
+  See the inputs `create_before_destroy` and `immediately_apply_lt_changes` for details about how to control this behavior.
+
+  ### Operating system differences
+
+  Currently, EKS supports 4 Operating Systems: Amazon Linux 2, Amazon Linux 2023, Bottlerocket, and Windows Server.
+  This module supports all 4 OSes, but support for detailed configuration of the nodes varies by OS. The 4 inputs:
+
+  1. `before_cluster_joining_userdata`
+  2. `kubelet_additional_options`
+  3. `bootstrap_additional_options`
+  4. `after_cluster_joining_userdata`
+
+  are fully supported for Amazon Linux 2 and Windows, and take advantage of the [bootstrap.sh](https://github.com/awslabs/amazon-eks-ami/blob/main/templates/al2/runtime/bootstrap.sh)
+  supplied on those AMIs. **NONE** of these inputs are supported on Bottlerocket. On AL2023, only the first 2 are supported.
+
+  Note that for all OSes, you can supply the complete `userdata` contents, which will be untouched by this module, via `userdata_override_base64`.
+
+
+# How to use this project
+usage: |2-
+
+  ### Major Changes (breaking and otherwise)
+
+  With the v3.0.0 release of this module, support for Amazon Linux 2023 (AL2023) has
+  been added, and some breaking changes have been made. Please see the
+  [release notes](https://github.com/cloudposse/terraform-aws-eks-node-group/releases/tag/3.0.0)
+  for details.
+
+  With the v2.0.0 (a.k.a. v0.25.0) release of this module, it has undergone major breaking
+  changes and added new features. Please see the [migration](docs/migration-v1-v2.md)
+  document for details.
+
+
+  For a complete example, see [examples/complete](examples/complete).
+
+  For automated tests of the complete example using [bats](https://github.com/bats-core/bats-core) and [Terratest](https://github.com/gruntwork-io/terratest) (which tests and deploys the example on AWS),
+  see [test](test).
+
+  ### Sources of Information
+
+  - The code examples below are manually updated and have a tendency to fall out of sync with actual code,
+  particularly with respect to usage of other modules. Do not rely on them.
+  - The documentation on this page about this module's inputs, outputs, and compliance is all automatically
+  generated and is up-to-date as of the release date. After the code itself, this is your best source of information.
+  - The code in [examples/complete](examples/complete) is automatically tested before every release,
+  so that is a good place to look for verified example code. Keep in mind, however, it is code for testing, so
+  it may not represent average use cases or best practices.
+  - Of course, the READMEs and `examples/complete` directories in the other modules' GitHub repos
+  are more authoritative with respect to how to use those modules than this README is.
+
+  #### Example Code
+
+  ```hcl
+  provider "aws" {
+    region = var.region
+  }
+
+  module "label" {
+    source = "cloudposse/label/null"
+    # Cloud Posse recommends pinning every module to a specific version
+    # version  = "x.x.x"
+
+    namespace  = var.namespace
+    name       = var.name
+    stage      = var.stage
+    delimiter  = var.delimiter
+    attributes = ["cluster"]
+    tags       = var.tags
+  }
+
+  locals {
+    # Prior to Kubernetes 1.19, the usage of the specific kubernetes.io/cluster/* resource tags below are required
+    # for EKS and Kubernetes to discover and manage networking resources
+    # https://www.terraform.io/docs/providers/aws/guides/eks-getting-started.html#base-vpc-networking
+    tags = { "kubernetes.io/cluster/${module.label.id}" = "shared" }
+  }
+
+  module "vpc" {
+    source = "cloudposse/vpc/aws"
+    # Cloud Posse recommends pinning every module to a specific version
+    # version = "1.x.x"
+
+    cidr_block = "172.16.0.0/16"
+
+    tags    = local.tags
+    context = module.label.context
+  }
+
+  module "subnets" {
+    source = "cloudposse/dynamic-subnets/aws"
+    # Cloud Posse recommends pinning every module to a specific version
+    # version = "2.x.x"
+
+    availability_zones   = var.availability_zones
+    vpc_id               = module.vpc.vpc_id
+    igw_id               = [module.vpc.igw_id]
+    ipv4_cidr_block      = [module.vpc.vpc_cidr_block]
+    nat_gateway_enabled  = true
+    nat_instance_enabled = false
+
+    tags    = local.tags
+    context = module.label.context
+  }
+
+  module "eks_cluster" {
+    source = "cloudposse/eks-cluster/aws"
+    # Cloud Posse recommends pinning every module to a specific version
+    # version = "4.x.x"
+
+    vpc_id     = module.vpc.vpc_id
+    subnet_ids = module.subnets.public_subnet_ids
+
+    kubernetes_version    = var.kubernetes_version
+    oidc_provider_enabled = true
+
+    context = module.label.context
+  }
+
+  module "eks_node_group" {
+    source = "cloudposse/eks-node-group/aws"
+    # Cloud Posse recommends pinning every module to a specific version
+    # version     = "3.x.x"
+
+    instance_types        = [var.instance_type]
+    subnet_ids            = module.subnets.public_subnet_ids
+    min_size              = var.min_size
+    max_size              = var.max_size
+    cluster_name          = module.eks_cluster.eks_cluster_id
+    create_before_destroy = true
+    kubernetes_version    = var.kubernetes_version == null || var.kubernetes_version == "" ? [] : [var.kubernetes_version]
+
+    # Enable the Kubernetes cluster auto-scaler to find the auto-scaling group
+    cluster_autoscaler_enabled = var.autoscaling_policies_enabled
+
+    context = module.label.context
+
+    # Ensure the cluster is fully created before trying to add the node group
+    module_depends_on = [module.eks_cluster.kubernetes_config_map_id]
+  }
+
+  ```
+
+include:
+  - "docs/windows.md"
+contributors: []

@@ -1,0 +1,19 @@
+#  Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+**/.idea
+**/*.iml
+
+**/.build-harness
+**/build-harness
+
+# vim editor
+*.swp
+
+/.terraform.lock.hcl
+/.vscode
+/examples/complete/.terraform.lock.hcl

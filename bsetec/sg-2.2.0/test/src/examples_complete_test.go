@@ -1,0 +1,108 @@
+package test
+
+import (
+	"os"
+	"regexp"
+	"strings"
+	"testing"
+
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/terraform"
+	testStructure "github.com/gruntwork-io/terratest/modules/test-structure"
+	"github.com/stretchr/testify/assert"
+
+	"k8s.io/apimachinery/pkg/util/runtime"
+)
+
+func cleanup(t *testing.T, terraformOptions *terraform.Options, tempTestFolder string) {
+	terraform.Destroy(t, terraformOptions)
+	os.RemoveAll(tempTestFolder)
+}
+
+// Test the Terraform module in examples/complete using Terratest.
+func TestExamplesComplete(t *testing.T) {
+	t.Parallel()
+	randID := strings.ToLower(random.UniqueId())
+	attributes := []string{randID}
+
+	rootFolder := "../../"
+	terraformFolderRelativeToRoot := "examples/complete"
+	varFiles := []string{"fixtures.us-east-2.tfvars"}
+
+	tempTestFolder := testStructure.CopyTerraformFolderToTemp(t, rootFolder, terraformFolderRelativeToRoot)
+
+	terraformOptions := &terraform.Options{
+		// The path to where our Terraform code is located
+		TerraformDir: tempTestFolder,
+		Upgrade:      true,
+		// Variables to pass to our Terraform code using -var-file options
+		VarFiles: varFiles,
+		Vars: map[string]interface{}{
+			"attributes": attributes,
+		},
+	}
+
+	// At the end of the test, run `terraform destroy` to clean up any resources that were created
+	defer cleanup(t, terraformOptions, tempTestFolder)
+
+	// If Go runtime crushes, run `terraform destroy` to clean up any resources that were created
+	defer runtime.HandleCrash(func(i interface{}) {
+		cleanup(t, terraformOptions, tempTestFolder)
+	})
+
+	// This will run `terraform init` and `terraform apply` and fail the test if there are any errors
+	terraform.InitAndApply(t, terraformOptions)
+
+	// Run `terraform output` to get the value of an output variable
+
+	// Verify that outputs are valid when no target security group is supplied
+	newSgID := terraform.Output(t, terraformOptions, "created_sg_id")
+	newSgARN := terraform.Output(t, terraformOptions, "created_sg_arn")
+	newSgName := terraform.Output(t, terraformOptions, "created_sg_name")
+
+	assert.Contains(t, newSgID, "sg-", "SG ID should contains substring 'sg-'")
+	assert.Contains(t, newSgARN, "arn:aws:ec2", "SG ID should contains substring 'arn:aws:ec2'")
+	assert.Contains(t, newSgName, "eg-ue2-test-sg-"+randID+"-new-")
+
+	// Verify that outputs are valid when an existing security group is provided
+	targetSgID := terraform.Output(t, terraformOptions, "target_sg_id")
+	testSgID := terraform.Output(t, terraformOptions, "test_created_sg_id")
+
+	assert.Equal(t, testSgID, targetSgID, "Module should return provided SG ID as \"id\" output")
+}
+
+func TestExamplesCompleteDisabled(t *testing.T) {
+	t.Parallel()
+	randID := strings.ToLower(random.UniqueId())
+	attributes := []string{randID}
+
+	rootFolder := "../../"
+	terraformFolderRelativeToRoot := "examples/complete"
+	varFiles := []string{"fixtures.us-east-2.tfvars"}
+
+	tempTestFolder := testStructure.CopyTerraformFolderToTemp(t, rootFolder, terraformFolderRelativeToRoot)
+
+	terraformOptions := &terraform.Options{
+		// The path to where our Terraform code is located
+		TerraformDir: tempTestFolder,
+		Upgrade:      true,
+		// Variables to pass to our Terraform code using -var-file options
+		VarFiles: varFiles,
+		Vars: map[string]interface{}{
+			"attributes": attributes,
+			"enabled":    "false",
+		},
+	}
+
+	// At the end of the test, run `terraform destroy` to clean up any resources that were created
+	defer cleanup(t, terraformOptions, tempTestFolder)
+
+	// This will run `terraform init` and `terraform apply` and fail the test if there are any errors
+	results := terraform.InitAndApply(t, terraformOptions)
+
+	// Should complete successfully without creating or changing any resources.
+	// Extract the "Resources:" section of the output to make the error message more readable.
+	re := regexp.MustCompile(`Resources: [^.]+\.`)
+	match := re.FindString(results)
+	assert.Equal(t, "Resources: 0 added, 0 changed, 0 destroyed.", match, "Re-applying the same configuration should not change any resources")
+}

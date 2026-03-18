@@ -1,0 +1,161 @@
+#
+# This is the canonical configuration for the `README.md`
+# Run `make readme` to rebuild the `README.md`
+#
+
+# Name of this project
+name: terraform-aws-ec2-instance-group
+# Logo for this project
+#logo: docs/logo.png
+
+# License of this project
+license: "APACHE2"
+# Canonical GitHub repo
+github_repo: cloudposse/terraform-aws-ec2-instance-group
+# Badges to display
+badges:
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudposse/terraform-aws-ec2-instance-group.svg?style=for-the-badge
+    url: https://github.com/cloudposse/terraform-aws-ec2-instance-group/releases/latest
+  - name: Last Updated
+    image: https://img.shields.io/github/last-commit/cloudposse/terraform-aws-ec2-instance-group.svg?style=for-the-badge
+    url: https://github.com/cloudposse/terraform-aws-ec2-instance-group/commits
+  - name: Slack Community
+    image: https://slack.cloudposse.com/for-the-badge.svg
+    url: https://slack.cloudposse.com
+
+# List any related terraform modules that this module may be used with or that this module depends on.
+related:
+  - name: "terraform-aws-ec2-instance"
+    description: "Terraform Module for providing a general EC2 instance provisioned by Ansible"
+    url: "https://github.com/cloudposse/terraform-aws-ec2-instance"
+  - name: "terraform-aws-ec2-bastion-server"
+    description: "Terraform Module to define a generic Bastion host with parameterized user_data"
+    url: "https://github.com/cloudposse/terraform-aws-ec2-bastion-server"
+  - name: "https://github.com/cloudposse/terraform-aws-rds-cluster"
+    description: "Terraform module to provision an RDS Aurora cluster for MySQL or Postgres"
+    url: "https://github.com/cloudposse/terraform-aws-rds-cluster"
+# Short description of this project
+description: |-
+  Terraform Module for providing N general purpose EC2 hosts.
+
+  If you only need to provision a single EC2 instance, consider using the [terraform-aws-ec2-instance](https://github.com/cloudposse/terraform-aws-ec2-instance) module instead.
+
+  **IMPORTANT** This module by-design does not provision an AutoScaling group. It was designed to provision a discrete number of instances suitable for running stateful services such as databases (e.g. Kafka, Redis, etc).
+
+
+  Included features:
+  * Automatically create a Security Group
+  * Option to switch EIP attachment
+  * CloudWatch monitoring and automatic reboot if instance hangs
+  * Assume Role capability
+# How to use this project
+usage: |-
+  Note: add `${var.ssh_key_pair}` private key to the `ssh agent`.
+
+  Include this repository as a module in your existing terraform code.
+
+
+  ### Simple example:
+
+  ```hcl
+  module "instance" {
+    source = "cloudposse/ec2-instance-group/aws"
+    # Cloud Posse recommends pinning every module to a specific version
+    # version = "x.x.x"
+    namespace                   = "eg"
+    stage                       = "prod"
+    name                        = "app"
+    ami                         = "ami-a4dc46db"
+    ami_owner                   = "099720109477"
+    ssh_key_pair                = var.ssh_key_pair
+    instance_type               = var.instance_type
+    vpc_id                      = var.vpc_id
+    security_groups             = var.security_groups
+    subnet                      = var.subnet
+    instance_count              = 3
+  }
+  ```
+
+  ### Example with additional volumes and EIP
+
+  ```hcl
+  module "kafka_instance" {
+    source = "cloudposse/ec2-instance-group/aws"
+    # Cloud Posse recommends pinning every module to a specific version
+    # version = "x.x.x"
+
+    namespace                   = "eg"
+    stage                       = "prod"
+    name                        = "app"
+    ami                         = "ami-a4dc46db"
+    ami_owner                   = "099720109477"
+    ssh_key_pair                = var.ssh_key_pair
+    vpc_id                      = var.vpc_id
+    security_groups             = var.security_groups
+    subnet                      = var.subnet
+    associate_public_ip_address = true
+    additional_ips_count        = 1
+    ebs_volume_count            = 2
+    instance_count              = 3
+
+    security_group_rules = [
+      {
+        type        = "egress"
+        from_port   = 0
+        to_port     = 65535
+        protocol    = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+      },
+      {
+        type        = "ingress"
+        from_port   = 22
+        to_port     = 22
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+      },
+      {
+        type        = "ingress"
+        from_port   = 80
+        to_port     = 80
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+      },
+      {
+        type        = "ingress"
+        from_port   = 443
+        to_port     = 443
+        protocol    = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+      }
+    ]
+  }
+  ```
+
+  ### Additional complete working example with variations of how to use the module
+  In /examples directory
+
+  This module depends on these modules:
+
+  * [terraform-terraform-label](https://github.com/cloudposse/terraform-terraform-label)
+
+  It is necessary to run `terraform get` or `terraform init` to download this module.
+
+  Now reference the label when creating an instance (for example):
+
+  ```hcl
+  resource "aws_ami_from_instance" "example" {
+    count              = length(module.instance.*.id)
+    name               = "app"
+    source_instance_id = element(module.instance.*.id, count.index)
+  }
+  ```
+references:
+  - name: "terraform-aws-ec2-bastion-server"
+    description: "Terraform module to define a generic Bastion host with parameterized user_data"
+    url: "https://github.com/cloudposse/terraform-aws-ec2-bastion-server"
+include:
+  - "docs/targets.md"
+  - "docs/terraform.md"
+# Contributors to this project
+contributors: []
